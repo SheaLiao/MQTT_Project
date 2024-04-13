@@ -1,0 +1,31 @@
+# Object files
+*.o
+*.obj 
+*.elf
+
+
+# Libraries
+*.lib 
+*.a
+*.la
+*.lo
+
+
+# Shared objects
+*.dll
+*.so
+*.so.*
+
+
+# Executables
+*.exe 
+*.out
+*.app
+*.hex
+
+
+*.log
+*.log.bak
+
+
+*.db
