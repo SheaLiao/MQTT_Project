@@ -14,23 +14,21 @@
 #ifndef _MQTT_H_
 #define _MQTT_H_
 
-typedef struct conn_para_s
+typedef struct mqtt_ctx_s
 {
 	char	clientId[128];
 	char	username[128];
 	char	password[128];
 	char	hosturl[128];
 	int		port;
-	char	sub_topic[128];
-	char	pub_topic[128];
-	char	payload[128];
+	char	topic[128];
 	int		keepalive;
 	int		qos;
-} conn_para_t;
 
-extern int mqtt_clean(struct mosquitto *mosq);
-extern struct mosquitto *mqtt_init(struct mosquitto *mosq, conn_para_t *para);
-extern int mqtt_connect(struct mosquitto *mosq, conn_para_t *para);
-void my_callback(struct mosquitto *mosq, void *obj, int rc);
+	char	id[128];
+//	char	method[128];
+//	char    identifier[128];
+//  char    version[128];
+} mqtt_ctx_t;
 
 #endif

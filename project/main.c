@@ -54,18 +54,34 @@ int main (int argc, char *argv[])
 	char				*logfile = "my_mqtt.log";
 	int					loglevel = LOG_LEVEL_INFO;
 	int					logsize = 10;
-
-	conn_para_t			para = {
+#if 0
+	/*阿里云*/
+	mqtt_ctx_t			mqtt = {
 		"k11n1ktsKW9.DS18B20|securemode=2,signmethod=hmacsha256,timestamp=1712143691890|",
 		"DS18B20&k11n1ktsKW9",
 		"6d308936f8fed79a5d328090854a4d0e027588a575ffc3b2a58518775e32bdd1",
 		"iot-06z00jezfxayfvn.mqtt.iothub.aliyuncs.com",
-		1833,
-		"sys/k11n1ktsKW9/DS18B20/thing/event/property/set",
+		1883,
 		"/sys/k11n1ktsKW9/DS18B20/thing/event/property/post",
-		"{\"data\":{\"temperature\":27.32}}",
 		60,
-		0
+		0,
+		"12345",
+		"thing.service.property.set",
+		"Temperature",
+		"1.0.0"
+	};
+#endif
+
+	mqtt_ctx_t		mqtt = {
+		"661cd5b2eec4311d4cdab089_12345_0_1_2024041507",
+		"661cd5b2eec4311d4cdab089_12345",
+		"bd58a37f3a50c4b9434c0bf3beabe4259d1b9bc13532d26393f05df82f4129c0",
+		"721dc60cd3.st1.iotda-device.cn-east-3.myhuaweicloud.com",
+		1883,
+		"$oc/devices/661cd5b2eec4311d4cdab089_12345/sys/properties/report",
+		60,
+		0,
+		"1001"
 	};
 
 	struct mosquitto	*mosq = NULL;
@@ -122,7 +138,7 @@ int main (int argc, char *argv[])
 	}
 
 	install_signal();
-	
+
 	if( daemon_run )
 	{
 		daemon(1, 0);
@@ -139,7 +155,7 @@ int main (int argc, char *argv[])
 	}
 
 	/*新建客户端*/
-	mosq = mosquitto_new(para.clientId, true, NULL);
+	mosq = mosquitto_new(mqtt.clientId, true, (void *)&mqtt);
 	if( !mosq )
 	{
 		log_error("create client failure: %s\n", strerror(errno));
@@ -149,7 +165,7 @@ int main (int argc, char *argv[])
 	log_info("create client successfully\n");
 
 	/*配置用户名密码*/
-	rv = mosquitto_username_pw_set(mosq, para.username, para.password);
+	rv = mosquitto_username_pw_set(mosq, mqtt.username, mqtt.password);
 	if( rv != MOSQ_ERR_SUCCESS )
 	{
 		log_error("set username and password failure: %s\n", strerror(errno));
@@ -158,11 +174,8 @@ int main (int argc, char *argv[])
 	}
 	log_info("mqtt set successfully\n");
 
-	log_info("topic: %s\n", para.pub_topic);
+	mosquitto_connect_callback_set(mosq, my_callback);
 
-
-
-#if 1
 
 	while( !g_signal.stop )
 	{
@@ -178,24 +191,21 @@ int main (int argc, char *argv[])
 			printf("data:%s\n", pack_bytes, pack_buf);
 		}
 #endif
-		mosquitto_connect_callback_set(mosq, my_callback);
-	
-		rv = mosquitto_connect(mosq, para.hosturl, para.port, para.keepalive);
-		log_info("hosturl: %s, port:%d\n", para.hosturl, para.port);
+
+		rv = mosquitto_connect(mosq, mqtt.hosturl, mqtt.port, mqtt.keepalive);
 		if( rv != MOSQ_ERR_SUCCESS )
 		{
 			log_error("connect failure: %s\n", strerror(errno));
-			continue;
-			sleep(1);
+			return 1;
 		}
 		log_info("connect successfully\n");
+	
 
 		mosquitto_loop_forever(mosq, -1, 1);
-		sleep(1);
+		sleep(3);
 
 	}
-#endif
-	
+
 
 OUT:
 	mosquitto_destroy(mosq);
@@ -224,25 +234,56 @@ int check_sample_time(int interval, time_t *last_time)
 
 void my_callback(struct mosquitto *mosq, void *obj, int rc)
 {
-	char            	pack_buf[1024];
-	int					pack_bytes= 0;
 	packet_t        	pack;
-	pack_proc_t			pack_proc = packet_json;
+	char				*msg;
 
 	int					rv = -1;
+	int					mid;
 
-	conn_para_t			*para;
+	mqtt_ctx_t			*mqtt;
+	
+	cJSON               *root;
+    cJSON				*item;
+	cJSON               *services;
+	cJSON				*properties;
 
-	sample_data(&pack); 
+	if( !mosq || !obj )
+    {
+        printf("invalid input argument\n");
+        return ;
+    }
 
-	pack_bytes = pack_proc(&pack, pack_buf, sizeof(pack_buf));
+	mqtt = (mqtt_ctx_t *)obj;
 
-	para = (conn_para_t *)obj;
+	get_temperature(&pack.temp);
+	
+	root = cJSON_CreateObject();
+    item = cJSON_CreateObject();
+	services = cJSON_CreateArray();
+	properties = cJSON_CreateObject();
 
-	log_info("pack_buf:%s\n", pack_buf);
+#if 0 
+	/*aliyun*/
+	cJSON_AddItemToObject(root,"method",cJSON_CreateString(mqtt->method));
+	cJSON_AddItemToObject(root,"id",cJSON_CreateString(mqtt->id));
+    cJSON_AddItemToObject(root,"params",item);
+    cJSON_AddItemToObject(item,"Temperature",cJSON_CreateNumber(pack.temp));
+    cJSON_AddItemToObject(root,"version",cJSON_CreateString(mqtt->version));
+#endif
+
+	cJSON_AddItemToObject(root, "services", services);
+	cJSON_AddItemToArray(services, item);
+	cJSON_AddItemToObject(item, "id", cJSON_CreateString(mqtt->id));
+	cJSON_AddItemToObject(item, "properties", properties);
+	cJSON_AddItemToObject(properties, "Temperature", cJSON_CreateNumber(pack.temp));
+
+
+	msg = cJSON_Print(root);
+	log_info("%s\n", msg);
+
 	if( !rc )
 	{
-		rv = mosquitto_publish(mosq, NULL, para->pub_topic, pack_bytes, pack_buf, para->qos, NULL);
+		rv = mosquitto_publish(mosq, &mid, mqtt->topic, strlen(msg), msg, mqtt->qos, 0);
 		if( rv != MOSQ_ERR_SUCCESS)
 		{
 			log_error("publish failure\n");
@@ -250,6 +291,7 @@ void my_callback(struct mosquitto *mosq, void *obj, int rc)
 		}
 	}
 
+	cJSON_Delete(root);
+	free(msg);
 	mosquitto_disconnect(mosq);
 }
-

@@ -25,7 +25,7 @@
 int get_devid(char *devid, int len)
 {
 	int		sn = 1;
-	
+
 	memset(devid, 0, len);
 	snprintf(devid, len, "rpi%04d", sn);
 	return 0;
@@ -35,13 +35,13 @@ int get_time(char *datetime)
 {
 	time_t		times;
 	struct tm	*ptm;
-	
+
 	time(&times);
 	ptm = gmtime(&times);
 	memset(datetime, 0, sizeof(datetime));
 	snprintf(datetime, 64, "%d-%d-%d %d:%d:%d",
-            1900+ptm->tm_year, 1+ptm->tm_mon, ptm->tm_mday,
-            8+ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+			1900+ptm->tm_year, 1+ptm->tm_mon, ptm->tm_mday,
+			8+ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
 	return 0;
 }
 
@@ -70,8 +70,20 @@ int packet_json(packet_t *pack, char *pack_buf, int size)
 	cJSON_AddNumberToObject(json, "temperature", pack->temp);
 	cJSON_AddStringToObject(json, "time", pack->datetime);
 	snprintf(pack_buf, size, cJSON_Print(json));
-	
+
 	cJSON_Delete(json);
 
 	return strlen(pack_buf);
 }
+
+#if 0
+/*aliyun-json*/
+int packet_aliyun(packet_t *pack, char *pack_buf, int size)
+{
+	cJSON       *root = cJSON_CreateObject();
+	cJSON       *item = cJSON_CreateObject();
+
+	cJSON_AddItemObject(root, "method", );	
+}
+
+#endif
