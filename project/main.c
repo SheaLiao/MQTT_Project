@@ -165,9 +165,15 @@ void my_callback(struct mosquitto *mosq, void *obj, int rc)
 
 	cJSON		*root;
 	cJSON		*item;
+	/*only huaweiyun*/
+	cJSON		*services;
+	cJSON		*properties;
 
 	root = cJSON_CreateObject();
 	item = cJSON_CreateObject();
+
+	services = cJSON_CreateArray();
+	properties = cJSON_CreateObject();
 
 
 	if( !mosq || !obj )
@@ -182,11 +188,20 @@ void my_callback(struct mosquitto *mosq, void *obj, int rc)
 
 	if( INI_PATH == "./conf/aliyun_conf.ini" )
 	{
-		cJSON_AddItemToObject(root,"method",cJSON_CreateString(mqtt->method));
-		cJSON_AddItemToObject(root,"id",cJSON_CreateString(mqtt->id));
-		cJSON_AddItemToObject(root,"params",item);
-		cJSON_AddItemToObject(item,"Temperature",cJSON_CreateNumber(pack.temp));
-		cJSON_AddItemToObject(root,"version",cJSON_CreateString(mqtt->version));
+		cJSON_AddItemToObject(root, "method", cJSON_CreateString(mqtt->method));
+		cJSON_AddItemToObject(root, "id", cJSON_CreateString(mqtt->id));
+		cJSON_AddItemToObject(root, "params", item);
+		cJSON_AddItemToObject(item, "Temperature", cJSON_CreateNumber(pack.temp));
+		cJSON_AddItemToObject(root, "version", cJSON_CreateString(mqtt->version));
+	}
+	else if ( INI_PATH == "./conf/huaweiyun_conf.ini" )
+	{
+		cJSON_AddItemToObject(root, "method", cJSON_CreateString(mqtt->method));
+		cJSON_AddItemToObject(root, "services", services);
+		cJSON_AddItemToArray(services, item);
+		cJSON_AddItemToObject(item, "id", cJSON_CreateString(mqtt->id));
+		cJSON_AddItemToObject(item, "properties", properties);
+		cJSON_AddItemToObject(properties, "Temperature", cJSON_CreateNumber(pack.temp));
 	}
 
 	msg = cJSON_Print(root);
