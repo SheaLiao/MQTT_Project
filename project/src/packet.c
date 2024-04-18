@@ -39,7 +39,7 @@ int get_time(char *datetime)
 	time(&times);
 	ptm = gmtime(&times);
 	memset(datetime, 0, sizeof(datetime));
-	snprintf(datetime, 64, "%d-%d-%d %d:%d:%d",
+	snprintf(datetime, 64, "%d-%d-%d %d-%d-%d",
 			1900+ptm->tm_year, 1+ptm->tm_mon, ptm->tm_mday,
 			8+ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
 	return 0;

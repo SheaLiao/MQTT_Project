@@ -29,3 +29,8 @@
 
 
 *.db
+
+#openlibs
+openlibs/*/*
+!/openlibs/*/build.sh 
+!/openlibs/*/makefile

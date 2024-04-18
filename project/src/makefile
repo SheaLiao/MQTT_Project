@@ -4,11 +4,13 @@ INCPATH=`pwd`/../include/
 SQLPATH=`pwd`/../openlibs/sqlite/install/include/ 
 JSONPATH=`pwd`/../openlibs/cJSON/install/include/cjson/
 MOSQPATH=`pwd`/../openlibs/mosquitto/install/include/
+INIPATH=`pwd`/../openlibs/iniparser/install/iniparser
 
 CFLAGS+=-I${INCPATH}
 CFLAGS+=-I${SQLPATH}
 CFLAGS+=-I${JSONPATH}
 CFLAGS+=-I${MOSQPATH}
+CFLAGS+=-I${INIPATH}
 
 CC=gcc
 AR=ar 
