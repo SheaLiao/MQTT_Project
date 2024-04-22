@@ -22,12 +22,13 @@
 #include <mosquitto.h>
 
 #include "ds18b20.h"
+#include "sht20.h"
 #include "logger.h"
 #include "packet.h"
 #include "proc.h"
 #include "mqtt_conf.h"
 
-#define INI_PATH "./conf/aliyun_conf.ini"
+#define INI_PATH 	"./conf/huaweiyun_sht20_conf.ini"
 
 void my_callback(struct mosquitto *mosq, void *obj, int rc);
 
@@ -157,17 +158,18 @@ OUT:
 
 void my_callback(struct mosquitto *mosq, void *obj, int rc)
 {
-	int			rv = -1;
+	int				rv = -1;
 
-	mqtt_ctx_t	*mqtt;
-	char		*msg;
-	packet_t	pack;
+	mqtt_ctx_t		*mqtt;
+	packet_t		pack;	/*ds18b20*/
+	sample_ctx_t	sample;	/*sht20*/
+	char			*msg;
 
-	cJSON		*root;
-	cJSON		*item;
+	cJSON			*root;
+	cJSON			*item;
 	/*only huaweiyun*/
-	cJSON		*services;
-	cJSON		*properties;
+	cJSON			*services;
+	cJSON			*properties;
 
 	root = cJSON_CreateObject();
 	item = cJSON_CreateObject();
@@ -184,7 +186,8 @@ void my_callback(struct mosquitto *mosq, void *obj, int rc)
 
 	mqtt = (mqtt_ctx_t *)obj;
 
-	get_temperature(&pack.temp);
+	sample_data(&pack);
+	sht20_sample_data(&sample);
 
 	if( INI_PATH == "./conf/aliyun_conf.ini" )
 	{
@@ -194,14 +197,33 @@ void my_callback(struct mosquitto *mosq, void *obj, int rc)
 		cJSON_AddItemToObject(item, "Temperature", cJSON_CreateNumber(pack.temp));
 		cJSON_AddItemToObject(root, "version", cJSON_CreateString(mqtt->version));
 	}
+	else if( INI_PATH == "./conf/aliyun_sht20_conf.ini" )
+	{
+		cJSON_AddItemToObject(root, "method", cJSON_CreateString(mqtt->method));
+		cJSON_AddItemToObject(root, "id", cJSON_CreateString(mqtt->id));
+		cJSON_AddItemToObject(root, "params", item);
+		cJSON_AddItemToObject(item, "Temperature", cJSON_CreateNumber(sample.temp));
+		cJSON_AddItemToObject(item, "Humidity", cJSON_CreateNumber(sample.rh));
+		cJSON_AddItemToObject(root, "version", cJSON_CreateString(mqtt->version));
+	}
 	else if ( INI_PATH == "./conf/huaweiyun_conf.ini" )
 	{
 		cJSON_AddItemToObject(root, "method", cJSON_CreateString(mqtt->method));
 		cJSON_AddItemToObject(root, "services", services);
 		cJSON_AddItemToArray(services, item);
-		cJSON_AddItemToObject(item, "id", cJSON_CreateString(mqtt->id));
+		cJSON_AddItemToObject(item, "service_id", cJSON_CreateString(mqtt->id));
 		cJSON_AddItemToObject(item, "properties", properties);
 		cJSON_AddItemToObject(properties, "Temperature", cJSON_CreateNumber(pack.temp));
+	}
+	else if ( INI_PATH == "./conf/huaweiyun_sht20_conf.ini" )
+	{
+		cJSON_AddItemToObject(root, "method", cJSON_CreateString(mqtt->method));
+		cJSON_AddItemToObject(root, "services", services);
+		cJSON_AddItemToArray(services, item);
+		cJSON_AddItemToObject(item, "service_id", cJSON_CreateString(mqtt->id));
+		cJSON_AddItemToObject(item, "properties", properties);
+		cJSON_AddItemToObject(properties, "Temperature", cJSON_CreateNumber(sample.temp));
+		cJSON_AddItemToObject(properties, "Humidity", cJSON_CreateNumber(sample.rh));
 	}
 
 	msg = cJSON_Print(root);
